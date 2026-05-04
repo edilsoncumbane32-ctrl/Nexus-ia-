@@ -1,3 +1,4 @@
+``html
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -128,7 +129,6 @@
 </div>
 
 <script>
-    // Firebase config (NÃO MEXA)
     const firebaseConfig = {
         apiKey: "AIzaSyAAMpRiTcUmBGgR_yjMW2Qb2CCBgFPrSGY",
         authDomain: "nexos-ia-edy-8bb39.firebaseapp.com",
@@ -142,7 +142,6 @@
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
 
-    // ⭐ SUA CHAVE DO OPENROUTER (já inserida)
     const OPENROUTER_API_KEY = "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";
 
     async function callOpenRouter(prompt) {
@@ -150,7 +149,9 @@
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://edilsoncumbane32-ctrl.github.io",
+                "X-Title": "Nexus IA"
             },
             body: JSON.stringify({
                 "model": "google/gemini-2.0-flash-lite-001",
@@ -162,7 +163,6 @@
         return data.choices[0].message.content;
     }
 
-    // Funções de créditos
     async function getCredits(uid) {
         const doc = await db.collection('users').doc(uid).get();
         return doc.exists ? doc.data().credits : 20;
@@ -173,12 +173,13 @@
     }
     async function spendCredit(uid) {
         let current = await getCredits(uid);
-        if (current <= 0) { alert('❌ Créditos insuficientes! Recarregue.'); return false; }
+        if (current <= 0) { alert('❌ Créditos insuficientes!'); return false; }
         await setCredits(uid, current - 1);
         return true;
     }
 
-    // Resumir
+    let currentResult = "";
+
     async function handleSummarize() {
         const text = document.getElementById('inputText').value.trim();
         if (!text) return alert('📌 Digite ou cole um texto.');
@@ -187,16 +188,17 @@
         if (!await spendCredit(user.uid)) return;
         const outputDiv = document.getElementById('resultText');
         document.getElementById('outputArea').style.display = 'block';
-        outputDiv.innerText = '⏳ Gerando resumo inteligente...';
+        outputDiv.innerText = '⏳ Gerando resumo...';
         try {
-            const prompt = `Você é o Nexus IA, assistente de estudos. Resuma o seguinte texto acadêmico de forma clara, destacando os pontos principais e a conclusão:\n\n${text}`;
+            const prompt = `Resuma o texto abaixo de forma clara, destacando os pontos principais:\n\n${text}`;
             const summary = await callOpenRouter(prompt);
             outputDiv.innerText = summary;
-            window.currentResult = summary;
-        } catch(e) { outputDiv.innerText = '❌ Erro: ' + e.message; }
+            currentResult = summary;
+        } catch(e) {
+            outputDiv.innerText = '❌ Erro: ' + e.message;
+        }
     }
 
-    // Preparar apresentação
     async function handlePresentation() {
         const text = document.getElementById('inputText').value.trim();
         if (!text) return alert('📌 Digite o tema da apresentação.');
@@ -205,57 +207,58 @@
         if (!await spendCredit(user.uid)) return;
         const outputDiv = document.getElementById('resultText');
         document.getElementById('outputArea').style.display = 'block';
-        outputDiv.innerText = '⏳ Preparando dicas para apresentação...';
+        outputDiv.innerText = '⏳ Preparando dicas...';
         try {
-            const prompt = `Com base no tema: ${text}. Gere 5 possíveis perguntas que a plateia pode fazer e 3 termos difíceis ou fórmulas com definições simples.`;
+            const prompt = `Tema: ${text}. Gere 5 perguntas que a plateia pode fazer e 3 termos difíceis com definições simples.`;
             const result = await callOpenRouter(prompt);
             outputDiv.innerText = result;
-            window.currentResult = result;
-        } catch(e) { outputDiv.innerText = '❌ Erro: ' + e.message; }
+            currentResult = result;
+        } catch(e) {
+            outputDiv.innerText = '❌ Erro: ' + e.message;
+        }
     }
 
-    function speakResult() { 
-        if(window.currentResult) {
-            const utterance = new SpeechSynthesisUtterance(window.currentResult);
+    function speakResult() {
+        if (currentResult) {
+            const utterance = new SpeechSynthesisUtterance(currentResult);
             utterance.lang = 'pt-BR';
             speechSynthesis.speak(utterance);
         }
     }
-    function copyResult() { 
-        if(window.currentResult) {
-            navigator.clipboard.writeText(window.currentResult);
+    function copyResult() {
+        if (currentResult) {
+            navigator.clipboard.writeText(currentResult);
             alert('✅ Copiado!');
         }
     }
     async function sendFeedback() {
         const user = auth.currentUser;
-        if(user && window.currentResult) {
+        if (user && currentResult) {
             await db.collection('feedbacks').add({
                 userId: user.uid,
-                textGerado: window.currentResult,
+                textGerado: currentResult,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
-            alert('🙏 Feedback enviado! Obrigado.');
-        } else alert('Nada para enviar.');
+            alert('🙏 Feedback enviado!');
+        }
     }
     async function rechargeCredits() {
         const code = document.getElementById('rechargeCode').value.trim();
-        if(code === 'SYNAP2024') {
+        if (code === 'SYNAP2024') {
             const uid = auth.currentUser.uid;
             let current = await getCredits(uid);
             await setCredits(uid, current + 20);
-            alert('🎉 +20 créditos adicionados!');
+            alert('🎉 +20 créditos!');
             document.getElementById('rechargeCode').value = '';
-        } else alert('❌ Código inválido. Use SYNAP2024');
+        } else alert('❌ Código inválido.');
     }
     function logout() { auth.signOut(); location.reload(); }
 
-    // Login
     auth.onAuthStateChanged(async (user) => {
-        if(user) {
+        if (user) {
             const userRef = db.collection('users').doc(user.uid);
             const doc = await userRef.get();
-            if(!doc.exists) await userRef.set({ name: user.displayName, email: user.email, credits: 20 });
+            if (!doc.exists) await userRef.set({ name: user.displayName, email: user.email, credits: 20 });
             const credits = await getCredits(user.uid);
             document.getElementById('creditsCount').innerText = credits;
             document.getElementById('userName').innerHTML = `👋 ${user.displayName?.split(' ')[0] || 'Estudante'}`;
@@ -267,7 +270,6 @@
         }
     });
 
-    // Eventos
     document.getElementById('googleLoginBtn').onclick = () => auth.signInWithPopup(provider);
     document.getElementById('summarizeBtn').onclick = handleSummarize;
     document.getElementById('presentationBtn').onclick = handlePresentation;
