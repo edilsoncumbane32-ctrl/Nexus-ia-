@@ -1,4 +1,3 @@
-``html
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -142,7 +141,8 @@
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
 
-    const OPENROUTER_API_KEY = "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";
+    // ⭐ A CHAVE AGORA É LIDA DA VARIÁVEL DE AMBIENTE (NÃO FICA MAIS NO CÓDIGO)
+    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
     async function callOpenRouter(prompt) {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -150,7 +150,7 @@
             headers: {
                 "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
                 "Content-Type": "application/json",
-                "HTTP-Referer": "https://edilsoncumbane32-ctrl.github.io",
+                "HTTP-Referer": "https://nexus-ia.vercel.app",
                 "X-Title": "Nexus IA"
             },
             body: JSON.stringify({
